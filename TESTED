@@ -226,7 +226,7 @@ function SyncUI:Create(Options)
     BackgroundColor3 = Color3.fromRGB(97, 152, 255),
     BorderColor3 = Color3.fromRGB(0, 0, 0),
     BorderSizePixel = 0,
-    Position = UDim2.new(0.4, 0, 0.263157904, 0),
+    Position = UDim2.new(0.1, 0, 0.263157904, 0),
     Size = UDim2.new(0, 85, 0, 26),
     Font = Enum.Font.Gotham,
     Text = "Login",
