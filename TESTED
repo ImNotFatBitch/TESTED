@@ -1,448 +1,582 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local UIS = game:GetService("UserInputService")
+local MenuEnabled = true
 
-local Window = Fluent:CreateWindow({
-    Title = "Fluent " .. Fluent.Version,
-    SubTitle = "by dawid",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
-})
+local State1 = false
+local State2 = false
+local State3 = false
+local State4 = false
+local State5 = false
 
---Fluent provides Lucide Icons https://lucide.dev/icons/ for the tabs, icons are optional
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
+dwSkeleton    = {}
+dwBody        = {}
+dwBox         = {}
+dwName        = nil
+dwDistance    = nil
 
-local Options = Fluent.Options
 
-local ESPEnabled = false
-local ESPNameColor = Color3.fromRGB(177, 255, 101)
-local ESPBoxColor = Color3.fromRGB(177, 255, 101)
-local RainbowColors = {
-    Color3.new(1, 0, 0),
-    Color3.new(1, 0.25, 0),
-    Color3.new(1, 0.5, 0),
-    Color3.new(1, 0.75, 0),
-    Color3.new(1, 1, 0),
-    Color3.new(0.75, 1, 0),
-    Color3.new(0.5, 1, 0),
-    Color3.new(0.25, 1, 0),
-    Color3.new(0, 1, 0),
-    Color3.new(0, 1, 0.25),
-    Color3.new(0, 1, 0.5),
-    Color3.new(0, 1, 0.75),
-    Color3.new(0, 1, 1),
-    Color3.new(0, 0.75, 1),
-    Color3.new(0, 0.5, 1),
-    Color3.new(0, 0.25, 1),
-    Color3.new(0, 0, 1),
-    Color3.new(0.25, 0, 1),
-    Color3.new(0.5, 0, 1),
-    Color3.new(0.75, 0, 1),
-    Color3.new(1, 0, 1),
-    Color3.new(1, 0, 0.75),
-    Color3.new(1, 0, 0.5),
-}
-
-local RainbowSpeed = 5
-local RainbowIndex = 1
-local RainbowEnabled = false
-local PlayerLineEnabled = false
-local PlayerDistanceEnabled = false
-local ObjectLineEnabled = false
-local ObjectDistanceEnabled = false
-
-local function createESP(Player)
-    local Name = Drawing.new("Text")
-    Name.Text = Player.Name
-    Name.Size = 16
-    Name.Outline = true
-    Name.Center = true
-
-    local Distance = Drawing.new("Text")
-    Distance.Size = 16
-    Distance.Outline = true
-    Distance.Center = true
-
-    local Line = Drawing.new("Line")
-    Line.Thickness = 2
-    Line.Visible = false
-
-    local function update()
-        Name.Color = ESPNameColor
-        Distance.Color = ESPNameColor
-
-        local Character = Player.Character
-        if Character then
-            local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if Humanoid and Humanoid.Health > 0 then
-                local Pos, OnScreen = Camera:WorldToViewportPoint(Character.Head.Position)
-                if OnScreen then
-                    local X = Pos.X
-                    local Y = Pos.Y
-                    Name.Position = Vector2.new(X, Y - 33)
-
-                    local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-                    local objectPos = Character.HumanoidRootPart.Position
-                    local dist = (playerPos - objectPos).Magnitude
-                    Distance.Text = string.format("%.2f", dist)
-
-                    Name.Visible = ESPEnabled
-                    Distance.Visible = ESPEnabled
-
-                    if PlayerDistanceEnabled then
-                        Distance.Position = Vector2.new(X, Y - 50)
-                        Distance.Visible = ESPEnabled
-                    else
-                        Distance.Visible = false
-                    end
-
-                    if PlayerLineEnabled then
-                        Line.Color = ESPBoxColor
-                        Line.From = Vector2.new(X, Y)
-                        Line.To = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        Line.Visible = ESPEnabled
-                    else
-                        Line.Visible = false
-                    end
-
-                    return
-                end
-            end
-        end
-        Name.Visible = false
-        Distance.Visible = false
-        Line.Visible = false
-    end
-
-    local Connection1 = Player.CharacterAdded:Connect(function()
-        update()
-    end)
-    local Connection2 = Player.CharacterRemoving:Connect(function()
-        Name.Visible = false
-        Distance.Visible = false
-        Line.Visible = false
-    end)
-
-    update()
-
-    return {
-        update = update,
-        disconnect = function()
-            Name:Remove()
-            Distance:Remove()
-            Line:Remove()
-            Connection1:Disconnect()
-            Connection2:Disconnect()
-        end,
-        Player = Player
-    }
+function dragify(Frame)
+   dragToggle = nil
+   local dragSpeed = 0
+   dragInput = nil
+   dragStart = nil
+   local dragPos = nil
+   function updateInput(input)
+       local Delta = input.Position - dragStart
+       local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+       game:GetService("TweenService"):Create(Frame, TweenInfo.new(0.1), {Position = Position}):Play()
+   end
+   Frame.InputBegan:Connect(function(input)
+       if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+           dragToggle = true
+           dragStart = input.Position
+           startPos = Frame.Position
+           input.Changed:Connect(function()
+               if (input.UserInputState == Enum.UserInputState.End) then
+                   dragToggle = false
+               end
+           end)
+       end
+   end)
+   Frame.InputChanged:Connect(function(input)
+       if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+           dragInput = input
+       end
+   end)
+   UIS.InputChanged:Connect(function(input)
+       if (input == dragInput and dragToggle) then
+           updateInput(input)
+       end
+   end)
 end
 
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ImageLabel = Instance.new("ImageLabel")
+local Box = Instance.new("Folder")
+local Frame_2 = Instance.new("Frame")
+local Frame_3 = Instance.new("Frame")
+local Frame_4 = Instance.new("Frame")
+local Frame_5 = Instance.new("Frame")
+local Skeleton = Instance.new("Folder")
+local Frame_6 = Instance.new("Frame")
+local Frame_7 = Instance.new("Frame")
+local Frame_8 = Instance.new("Frame")
+local Frame_9 = Instance.new("Frame")
+local Frame_10 = Instance.new("Frame")
+local Frame_11 = Instance.new("Frame")
+local Frame_12 = Instance.new("Frame")
+local Frame_13 = Instance.new("Frame")
+local Frame_14 = Instance.new("Frame")
+local Frame_15 = Instance.new("Frame")
+local Body = Instance.new("Folder")
+local TextBox_2 = Instance.new("TextBox")
+local TextBox_3 = Instance.new("TextBox")
+local UICorner = Instance.new("UICorner")
+local UICorner_2 = Instance.new("UICorner")
+local Frame_16 = Instance.new("Frame")
+local UICorner_3 = Instance.new("UICorner")
+local Toggle1 = Instance.new("TextButton")
+local UICorner_4 = Instance.new("UICorner")
+local Frame_17 = Instance.new("Frame")
+local UICorner_5 = Instance.new("UICorner")
+local Toggle2 = Instance.new("TextButton")
+local UICorner_6 = Instance.new("UICorner")
+local Frame_18 = Instance.new("Frame")
+local UICorner_7 = Instance.new("UICorner")
+local Toggle3 = Instance.new("TextButton")
+local UICorner_8 = Instance.new("UICorner")
+local Frame_19 = Instance.new("Frame")
+local UICorner_9 = Instance.new("UICorner")
+local Toggle4 = Instance.new("TextButton")
+local UICorner_10 = Instance.new("UICorner")
+local Frame_20 = Instance.new("Frame")
+local UICorner_11 = Instance.new("UICorner")
+local TextLabel = Instance.new("TextLabel")
+local TextLabel_2 = Instance.new("TextLabel")
+local TextLabel_3 = Instance.new("TextLabel")
+local TextLabel_4 = Instance.new("TextLabel")
+local Toggle5 = Instance.new("TextButton")
+local UICorner_12 = Instance.new("UICorner")
+local Frame_21 = Instance.new("Frame")
+local UICorner_13 = Instance.new("UICorner")
+local TextLabel_5 = Instance.new("TextLabel")
+local TextLabel_6 = Instance.new("TextLabel")
 
-local EspList = {}
+--Properties:
 
-local function updateRainbow()
-    if RainbowEnabled then
-        RainbowIndex = (RainbowIndex + 1/RainbowSpeed) % #RainbowColors
-        local ColorIndex = math.floor(RainbowIndex) + 1
-        ESPNameColor = RainbowColors[ColorIndex]
-        ESPBoxColor = RainbowColors[ColorIndex]
-        for _, Esp in pairs(EspList) do
-            Esp.update()
-        end
-    end
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame.Position = UDim2.new(0.481898636, 0, 0.302469134, 0)
+Frame.Size = UDim2.new(0, 461, 0, 275)
+
+ImageLabel.Parent = Frame
+ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ImageLabel.BackgroundTransparency = 1.000
+ImageLabel.BorderSizePixel = 0
+ImageLabel.Position = UDim2.new(0.466636717, 0, 0.0324022062, 0)
+ImageLabel.Size = UDim2.new(0, 238, 0, 257)
+ImageLabel.Image = "rbxassetid://12194422580"
+
+Box.Name = "Box"
+Box.Parent = ImageLabel
+
+Frame_2.Parent = Box
+Frame_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_2.Position = UDim2.new(0.165382713, 0, 0.138771385, 0)
+Frame_2.Size = UDim2.new(0, 1, 0, 182)
+Frame_2.Visible = false
+table.insert(dwBox, Frame_2)
+
+Frame_3.Parent = Box
+Frame_3.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_3.Position = UDim2.new(0.841853321, 0, 0.138771385, 0)
+Frame_3.Size = UDim2.new(0, 1, 0, 182)
+Frame_3.Visible = false
+table.insert(dwBox, Frame_3)
+
+Frame_4.Parent = Box
+Frame_4.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_4.Position = UDim2.new(0.501517177, 0, 0.54344064, 0)
+Frame_4.Rotation = 90.000
+Frame_4.Size = UDim2.new(0, 1, 0, 160)
+Frame_4.Visible = false
+table.insert(dwBox, Frame_4)
+
+Frame_5.Parent = Box
+Frame_5.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_5.Position = UDim2.new(0.501517177, 0, -0.17251265, 0)
+Frame_5.Rotation = 90.000
+Frame_5.Size = UDim2.new(0, 1, 0, 160)
+Frame_5.Visible = false
+table.insert(dwBox, Frame_5)
+
+Skeleton.Name = "Skeleton"
+Skeleton.Parent = ImageLabel
+
+Frame_6.Parent = Skeleton
+Frame_6.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_6.Position = UDim2.new(0.289999992, 0, 0.354999989, 0)
+Frame_6.Size = UDim2.new(0, 0, 0, 43)
+Frame_6.Visible = false
+table.insert(dwSkeleton, Frame_6)
+
+Frame_7.Parent = Skeleton
+Frame_7.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_7.Position = UDim2.new(0.504626632, 0, 0.363791853, 0)
+Frame_7.Size = UDim2.new(0, 0, 0, 43)
+Frame_7.Visible = false
+table.insert(dwSkeleton, Frame_7)
+
+Frame_8.Parent = Skeleton
+Frame_8.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_8.Position = UDim2.new(0.435000002, 0, 0.601000011, 0)
+Frame_8.Size = UDim2.new(0, 0, 0, 43)
+Frame_8.Visible = false
+table.insert(dwSkeleton, Frame_8)
+
+Frame_9.Parent = Skeleton
+Frame_9.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_9.Position = UDim2.new(0.574999988, 0, 0.601000011, 0)
+Frame_9.Size = UDim2.new(0, 0, 0, 42)
+Frame_9.Visible = false
+table.insert(dwSkeleton, Frame_9)
+
+Frame_10.Parent = Skeleton
+Frame_10.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_10.Position = UDim2.new(0.467739344, 0, 0.530568421, 0)
+Frame_10.Rotation = 45.000
+Frame_10.Size = UDim2.new(0, 0, 0, 21)
+Frame_10.Visible = false
+table.insert(dwSkeleton, Frame_10)
+
+Frame_11.Parent = Skeleton
+Frame_11.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_11.Position = UDim2.new(0.540000021, 0, 0.531000018, 0)
+Frame_11.Rotation = -45.000
+Frame_11.Size = UDim2.new(0, 0, 0, 21)
+Frame_11.Visible = false
+table.insert(dwSkeleton, Frame_11)
+
+Frame_12.Parent = Skeleton
+Frame_12.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_12.Position = UDim2.new(0.400578082, 0, 0.253633499, 0)
+Frame_12.Rotation = 90.000
+Frame_12.Size = UDim2.new(0, 0, 0, 52)
+Frame_12.Visible = false
+table.insert(dwSkeleton, Frame_12)
+
+Frame_13.Parent = Skeleton
+Frame_13.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_13.Position = UDim2.new(0.611000001, 0, 0.246999994, 0)
+Frame_13.Rotation = 90.000
+Frame_13.Size = UDim2.new(0, 0, 0, 54)
+Frame_13.Visible = false
+table.insert(dwSkeleton, Frame_13)
+
+Frame_14.Parent = Skeleton
+Frame_14.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_14.Position = UDim2.new(0.504626632, 0, 0.243829742, 0)
+Frame_14.Size = UDim2.new(0, 0, 0, 43)
+Frame_14.Visible = false
+table.insert(dwSkeleton, Frame_14)
+
+Frame_15.Parent = Skeleton
+Frame_15.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_15.Position = UDim2.new(0.726974785, 0, 0.354999989, 0)
+Frame_15.Size = UDim2.new(0, 0, 0, 43)
+Frame_15.Visible = false
+table.insert(dwSkeleton, Frame_15)
+
+Body.Name = "Body"
+Body.Parent = ImageLabel
+
+TextBox_2.Parent = ImageLabel
+TextBox_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextBox_2.BackgroundTransparency = 1.000
+TextBox_2.Position = UDim2.new(0.169584394, 0, 0.846942604, 0)
+TextBox_2.Size = UDim2.new(0, 160, 0, 28)
+TextBox_2.Visible = false
+TextBox_2.Font = Enum.Font.SourceSans
+TextBox_2.Text = "[300m]"
+TextBox_2.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextBox_2.TextSize = 14.000
+dwDistance = TextBox_2
+
+TextBox_3.Parent = ImageLabel
+TextBox_3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextBox_3.BackgroundTransparency = 1.000
+TextBox_3.Position = UDim2.new(0.169584394, 0, 0.0492772199, 0)
+TextBox_3.Size = UDim2.new(0, 160, 0, 17)
+TextBox_3.Visible = false
+TextBox_3.Font = Enum.Font.SourceSans
+TextBox_3.Text = "Player Name"
+TextBox_3.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextBox_3.TextSize = 14.000
+dwName = TextBox_3
+
+UICorner.Parent = ImageLabel
+
+UICorner_2.CornerRadius = UDim.new(0, 5)
+UICorner_2.Parent = Frame
+
+Frame_16.Parent = Frame
+Frame_16.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_16.BorderColor3 = Color3.fromRGB(226, 226, 226)
+Frame_16.Size = UDim2.new(0, 208, 0, 275)
+
+UICorner_3.CornerRadius = UDim.new(0, 5)
+UICorner_3.Parent = Frame_16
+
+Toggle1.Name = "Toggle1"
+Toggle1.Parent = Frame_16
+Toggle1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggle1.Position = UDim2.new(0.0612244233, 0, 0.0731770396, 0)
+Toggle1.Size = UDim2.new(0, 39, 0, 17)
+Toggle1.Font = Enum.Font.SourceSans
+Toggle1.Text = ""
+Toggle1.TextColor3 = Color3.fromRGB(0, 0, 0)
+Toggle1.TextSize = 14.000
+
+UICorner_4.CornerRadius = UDim.new(2, 8)
+UICorner_4.Parent = Toggle1
+
+Frame_17.Parent = Toggle1
+Frame_17.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_17.Position = UDim2.new(0, 3, 0.104313716, 0)
+Frame_17.Size = UDim2.new(0, 17, 0, 13)
+
+UICorner_5.CornerRadius = UDim.new(2, 8)
+UICorner_5.Parent = Frame_17
+
+Toggle2.Name = "Toggle2"
+Toggle2.Parent = Frame_16
+Toggle2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggle2.Position = UDim2.new(0.0610000007, 0, 0.165000007, 0)
+Toggle2.Size = UDim2.new(0, 39, 0, 17)
+Toggle2.Font = Enum.Font.SourceSans
+Toggle2.Text = ""
+Toggle2.TextColor3 = Color3.fromRGB(0, 0, 0)
+Toggle2.TextSize = 14.000
+
+UICorner_6.CornerRadius = UDim.new(2, 8)
+UICorner_6.Parent = Toggle2
+
+Frame_18.Parent = Toggle2
+Frame_18.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_18.Position = UDim2.new(0, 3, 0.104313716, 0)
+Frame_18.Size = UDim2.new(0, 17, 0, 13)
+
+UICorner_7.CornerRadius = UDim.new(2, 8)
+UICorner_7.Parent = Frame_18
+
+Toggle3.Name = "Toggle3"
+Toggle3.Parent = Frame_16
+Toggle3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggle3.Position = UDim2.new(0.0610000007, 0, 0.254999995, 0)
+Toggle3.Size = UDim2.new(0, 39, 0, 17)
+Toggle3.Font = Enum.Font.SourceSans
+Toggle3.Text = ""
+Toggle3.TextColor3 = Color3.fromRGB(0, 0, 0)
+Toggle3.TextSize = 14.000
+
+UICorner_8.CornerRadius = UDim.new(2, 8)
+UICorner_8.Parent = Toggle3
+
+Frame_19.Parent = Toggle3
+Frame_19.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_19.Position = UDim2.new(0, 3, 0.104313716, 0)
+Frame_19.Size = UDim2.new(0, 17, 0, 13)
+
+UICorner_9.CornerRadius = UDim.new(2, 8)
+UICorner_9.Parent = Frame_19
+
+Toggle4.Name = "Toggle4"
+Toggle4.Parent = Frame_16
+Toggle4.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggle4.Position = UDim2.new(0.0610000007, 0, 0.345999986, 0)
+Toggle4.Size = UDim2.new(0, 39, 0, 17)
+Toggle4.Font = Enum.Font.SourceSans
+Toggle4.Text = ""
+Toggle4.TextColor3 = Color3.fromRGB(0, 0, 0)
+Toggle4.TextSize = 14.000
+
+UICorner_10.CornerRadius = UDim.new(2, 8)
+UICorner_10.Parent = Toggle4
+
+Frame_20.Parent = Toggle4
+Frame_20.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_20.Position = UDim2.new(0, 3, 0.104313716, 0)
+Frame_20.Size = UDim2.new(0, 17, 0, 13)
+
+UICorner_11.CornerRadius = UDim.new(2, 8)
+UICorner_11.Parent = Frame_20
+
+TextLabel.Parent = Frame_16
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.BackgroundTransparency = 1.000
+TextLabel.Position = UDim2.new(0.307692319, 0, 0.0731770471, 0)
+TextLabel.Size = UDim2.new(0, 138, 0, 16)
+TextLabel.Font = Enum.Font.SourceSans
+TextLabel.Text = "Enabled"
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextSize = 16.000
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+TextLabel_2.Parent = Frame_16
+TextLabel_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_2.BackgroundTransparency = 1.000
+TextLabel_2.Position = UDim2.new(0.307692319, 0, 0.164086133, 0)
+TextLabel_2.Size = UDim2.new(0, 138, 0, 16)
+TextLabel_2.Font = Enum.Font.SourceSans
+TextLabel_2.Text = "Boxes"
+TextLabel_2.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_2.TextSize = 16.000
+TextLabel_2.TextXAlignment = Enum.TextXAlignment.Left
+
+TextLabel_3.Parent = Frame_16
+TextLabel_3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_3.BackgroundTransparency = 1.000
+TextLabel_3.Position = UDim2.new(0.307692319, 0, 0.254995227, 0)
+TextLabel_3.Size = UDim2.new(0, 138, 0, 17)
+TextLabel_3.Font = Enum.Font.SourceSans
+TextLabel_3.Text = "Skeleton"
+TextLabel_3.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_3.TextSize = 16.000
+TextLabel_3.TextXAlignment = Enum.TextXAlignment.Left
+
+TextLabel_4.Parent = Frame_16
+TextLabel_4.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_4.BackgroundTransparency = 1.000
+TextLabel_4.Position = UDim2.new(0.307692319, 0, 0.34590432, 0)
+TextLabel_4.Size = UDim2.new(0, 138, 0, 17)
+TextLabel_4.Font = Enum.Font.SourceSans
+TextLabel_4.Text = "Name"
+TextLabel_4.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_4.TextSize = 16.000
+TextLabel_4.TextXAlignment = Enum.TextXAlignment.Left
+
+Toggle5.Name = "Toggle5"
+Toggle5.Parent = Frame_16
+Toggle5.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggle5.Position = UDim2.new(0.0610000007, 0, 0.437000006, 0)
+Toggle5.Size = UDim2.new(0, 39, 0, 17)
+Toggle5.Font = Enum.Font.SourceSans
+Toggle5.Text = ""
+Toggle5.TextColor3 = Color3.fromRGB(0, 0, 0)
+Toggle5.TextSize = 14.000
+
+UICorner_12.CornerRadius = UDim.new(2, 8)
+UICorner_12.Parent = Toggle5
+
+Frame_21.Parent = Toggle5
+Frame_21.BackgroundColor3 = Color3.fromRGB(93, 93, 93)
+Frame_21.Position = UDim2.new(0, 3, 0.104313716, 0)
+Frame_21.Size = UDim2.new(0, 17, 0, 13)
+
+UICorner_13.CornerRadius = UDim.new(2, 8)
+UICorner_13.Parent = Frame_21
+
+TextLabel_5.Parent = Frame_16
+TextLabel_5.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_5.BackgroundTransparency = 1.000
+TextLabel_5.Position = UDim2.new(0.0721153915, 0, 0.902267933, 0)
+TextLabel_5.Size = UDim2.new(0, 138, 0, 17)
+TextLabel_5.Font = Enum.Font.SourceSans
+TextLabel_5.Text = "Created by PH4N70M"
+TextLabel_5.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_5.TextSize = 16.000
+TextLabel_5.TextXAlignment = Enum.TextXAlignment.Left
+
+TextLabel_6.Parent = Frame_16
+TextLabel_6.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_6.BackgroundTransparency = 1.000
+TextLabel_6.Position = UDim2.new(0.307692319, 0, 0.436813414, 0)
+TextLabel_6.Size = UDim2.new(0, 138, 0, 17)
+TextLabel_6.Font = Enum.Font.SourceSans
+TextLabel_6.Text = "Distance"
+TextLabel_6.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_6.TextSize = 16.000
+TextLabel_6.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Scripts:
+
+local function Toggle1_() -- Toggle1.LocalScript
+local Frame = Toggle1
+local ToggleFrame = Frame.Frame
+local ToggleBtn = Frame
+
+function UpdateScreen1()
+if State1 == true then
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(142, 28, 255)
+ToggleFrame:TweenPosition(UDim2.new(0.41, 3,0.104, 0), "In", "Linear", 0.2, false)
+else
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFrame:TweenPosition(UDim2.new(0, 3,0.104, 0), "Out", "Linear", 0.2, false)
 end
-
-local EspList = {}
-for _, Player in pairs(game.Players:GetPlayers()) do
-    if Player ~= game.Players.LocalPlayer then
-        table.insert(EspList, createESP(Player))
-    end
 end
+UpdateScreen1()
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    for _, Esp in pairs(EspList) do
-        Esp.update()
-    end
-    updateRainbow()
+ToggleBtn.MouseButton1Click:Connect(function()
+State1 = not State1
+   UpdateScreen1()
+end)
+end
+Toggle1_()
+local function Toggle2_() -- Toggle2.LocalScript
+local Frame = Toggle2
+local ToggleFrame = Frame.Frame
+local ToggleBtn = Frame
+
+function UpdateScreen2()
+if State2 == true then
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(142, 28, 255)
+ToggleFrame:TweenPosition(UDim2.new(0.436, 3,0.104, 0), "In", "Linear", 0.2, false)
+else
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFrame:TweenPosition(UDim2.new(0, 3,0.104, 0), "Out", "Linear", 0.2, false)
+end
+end
+UpdateScreen2()
+
+ToggleBtn.MouseButton1Click:Connect(function()
+State2 = not State2
+
+       for i,v in pairs(dwBox) do
+           v.Visible = State2
+       end
+   UpdateScreen2()
+end)
+end
+Toggle2_()
+local function Toggle3_() -- Toggle3.LocalScript
+local Frame = Toggle3
+local ToggleFrame = Frame.Frame
+local ToggleBtn = Frame
+
+function UpdateScreen3()
+if State3 == true then
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(142, 28, 255)
+ToggleFrame:TweenPosition(UDim2.new(0.436, 3,0.104, 0), "In", "Linear", 0.2, false)
+else
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFrame:TweenPosition(UDim2.new(0, 3,0.104, 0), "Out", "Linear", 0.2, false)
+end
+end
+UpdateScreen3()
+
+ToggleBtn.MouseButton1Click:Connect(function()
+State3 = not State3
+
+       for i,v in pairs(dwSkeleton) do
+           v.Visible = State3
+       end
+   UpdateScreen3()
+end)
+end
+Toggle3_()
+local function Toggle4_() -- Toggle4.LocalScript
+local Frame = Toggle4
+local ToggleFrame = Frame.Frame
+local ToggleBtn = Frame
+
+function UpdateScreen4()
+if State4 == true then
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(142, 28, 255)
+ToggleFrame:TweenPosition(UDim2.new(0.436, 3,0.104, 0), "In", "Linear", 0.2, false)
+else
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFrame:TweenPosition(UDim2.new(0, 3,0.104, 0), "Out", "Linear", 0.2, false)
+end
+end
+UpdateScreen4()
+
+ToggleBtn.MouseButton1Click:Connect(function()
+State4 = not State4
+
+       dwName.Visible = State4
+   UpdateScreen4()
+end)
+end
+Toggle4_()
+local function Toggle5_() -- Toggle5.LocalScript
+local Frame = Toggle5
+local ToggleFrame = Frame.Frame
+local ToggleBtn = Frame
+
+function UpdateScreen5()
+if State5 == true then
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(142, 28, 255)
+ToggleFrame:TweenPosition(UDim2.new(0.436, 3,0.104, 0), "In", "Linear", 0.2, false)
+else
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFrame:TweenPosition(UDim2.new(0, 3,0.104, 0), "Out", "Linear", 0.2, false)
+end
+end
+UpdateScreen5()
+
+ToggleBtn.MouseButton1Click:Connect(function()
+State5 = not State5
+
+       dwDistance.Visible = State5
+   UpdateScreen5()
+end)
+end
+Toggle5_()
+
+
+-- If Right shift is pressed, show menu
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+   if input.KeyCode == Enum.KeyCode.RightShift then
+       MenuEnabled = not MenuEnabled
+       Frame.Visible = MenuEnabled
+   end
+
+   if input.KeyCode == Enum.KeyCode.Delete then
+       ScreenGui:Destroy()
+   end
 end)
 
-game.Players.PlayerAdded:Connect(function(Player)
-    if Player ~= game.Players.LocalPlayer then
-        table.insert(EspList, createESP(Player))
-    end
-end)
-
-do
-    Fluent:Notify({
-        Title = "Notification",
-        Content = "This is a notification",
-        SubContent = "SubContent", -- Optional
-        Duration = 5 -- Set to nil to make the notification not disappear
-    })
-
-
-
-    Tabs.Main:AddParagraph({
-        Title = "Paragraph",
-        Content = "This is a paragraph.\nSecond line!"
-    })
-
-
-
-    Tabs.Main:AddButton({
-        Title = "Button",
-        Description = "Very important button",
-        Callback = function()
-            Window:Dialog({
-                Title = "Title",
-                Content = "This is a dialog",
-                Buttons = {
-                    {
-                        Title = "Confirm",
-                        Callback = function()
-                            print("Confirmed the dialog.")
-                        end
-                    },
-                    {
-                        Title = "Cancel",
-                        Callback = function()
-                            print("Cancelled the dialog.")
-                        end
-                    }
-                }
-            })
-        end
-    })
-
-
-
-    local Toggle = Tabs.Main:AddToggle("MyToggle", {Title = "Toggle", Default = false })
-
-    Toggle:OnChanged(function()
-        Callback = function(Value)
-            ObjectESPEnabled = Value
-            if Value then
-            for _, Esp in pairs(ObjectEspList) do
-                Esp.disconnect()
-            end
-            ObjectEspList = {}
-            local object = game.Workspace.Balls:GetChildren()[1]
-            if object then
-                local Esp = createObjectESP(object)
-                table.insert(ObjectEspList, Esp)
-                object:GetPropertyChangedSignal("Name"):Connect(function()
-                    Esp.update()
-                end)
-            end
-            game:GetService("RunService").RenderStepped:Connect(updateObjectEsp)
-            game.Workspace.Balls.ChildAdded:Connect(function(child)
-                for _, Esp in pairs(ObjectEspList) do
-                    Esp.disconnect()
-                end
-                ObjectEspList = {}
-                local newEsp = createObjectESP(child)
-                table.insert(ObjectEspList, newEsp)
-            end)
-        else
-            for _, Esp in pairs(ObjectEspList) do
-                Esp.disconnect()
-            end
-            ObjectEspList = {}
-        end
-    end)
-
-    Options.MyToggle:SetValue(false)
-
-
-    
-    local Slider = Tabs.Main:AddSlider("Slider", {
-        Title = "Slider",
-        Description = "This is a slider",
-        Default = 2,
-        Min = 0,
-        Max = 5,
-        Rounding = 1,
-        Callback = function(Value)
-            print("Slider was changed:", Value)
-        end
-    })
-
-    Slider:OnChanged(function(Value)
-        print("Slider changed:", Value)
-    end)
-
-    Slider:SetValue(3)
-
-
-
-    local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
-        Title = "Dropdown",
-        Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
-        Multi = false,
-        Default = 1,
-    })
-
-    Dropdown:SetValue("four")
-
-    Dropdown:OnChanged(function(Value)
-        print("Dropdown changed:", Value)
-    end)
-
-
-    
-    local MultiDropdown = Tabs.Main:AddDropdown("MultiDropdown", {
-        Title = "Dropdown",
-        Description = "You can select multiple values.",
-        Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
-        Multi = true,
-        Default = {"seven", "twelve"},
-    })
-
-    MultiDropdown:SetValue({
-        three = true,
-        five = true,
-        seven = false
-    })
-
-    MultiDropdown:OnChanged(function(Value)
-        local Values = {}
-        for Value, State in next, Value do
-            table.insert(Values, Value)
-        end
-        print("Mutlidropdown changed:", table.concat(Values, ", "))
-    end)
-
-
-
-    local Colorpicker = Tabs.Main:AddColorpicker("Colorpicker", {
-        Title = "Colorpicker",
-        Default = Color3.fromRGB(96, 205, 255)
-    })
-
-    Colorpicker:OnChanged(function()
-        print("Colorpicker changed:", Colorpicker.Value)
-    end)
-    
-    Colorpicker:SetValueRGB(Color3.fromRGB(0, 255, 140))
-
-
-
-    local TColorpicker = Tabs.Main:AddColorpicker("TransparencyColorpicker", {
-        Title = "Colorpicker",
-        Description = "but you can change the transparency.",
-        Transparency = 0,
-        Default = Color3.fromRGB(96, 205, 255)
-    })
-
-    TColorpicker:OnChanged(function()
-        print(
-            "TColorpicker changed:", TColorpicker.Value,
-            "Transparency:", TColorpicker.Transparency
-        )
-    end)
-
-
-
-    local Keybind = Tabs.Main:AddKeybind("Keybind", {
-        Title = "KeyBind",
-        Mode = "Toggle", -- Always, Toggle, Hold
-        Default = "LeftControl", -- String as the name of the keybind (MB1, MB2 for mouse buttons)
-
-        -- Occurs when the keybind is clicked, Value is `true`/`false`
-        Callback = function(Value)
-            print("Keybind clicked!", Value)
-        end,
-
-        -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
-        ChangedCallback = function(New)
-            print("Keybind changed!", New)
-        end
-    })
-
-    -- OnClick is only fired when you press the keybind and the mode is Toggle
-    -- Otherwise, you will have to use Keybind:GetState()
-    Keybind:OnClick(function()
-        print("Keybind clicked:", Keybind:GetState())
-    end)
-
-    Keybind:OnChanged(function()
-        print("Keybind changed:", Keybind.Value)
-    end)
-
-    task.spawn(function()
-        while true do
-            wait(1)
-
-            -- example for checking if a keybind is being pressed
-            local state = Keybind:GetState()
-            if state then
-                print("Keybind is being held down")
-            end
-
-            if Fluent.Unloaded then break end
-        end
-    end)
-
-    Keybind:SetValue("MB2", "Toggle") -- Sets keybind to MB2, mode to Hold
-
-
-    local Input = Tabs.Main:AddInput("Input", {
-        Title = "Input",
-        Default = "Default",
-        Placeholder = "Placeholder",
-        Numeric = false, -- Only allows numbers
-        Finished = false, -- Only calls callback when you press enter
-        Callback = function(Value)
-            print("Input changed:", Value)
-        end
-    })
-
-    Input:OnChanged(function()
-        print("Input updated:", Input.Value)
-    end)
-end
-
-
--- Addons:
--- SaveManager (Allows you to have a configuration system)
--- InterfaceManager (Allows you to have a interface managment system)
-
--- Hand the library over to our managers
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-
--- Ignore keys that are used by ThemeManager.
--- (we dont want configs to save themes, do we?)
-SaveManager:IgnoreThemeSettings()
-
--- You can add indexes of elements the save manager should ignore
-SaveManager:SetIgnoreIndexes({})
-
--- use case for doing it this way:
--- a script hub could have themes in a global folder
--- and game configs in a separate folder per game
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-
-Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "Fluent",
-    Content = "The script has been loaded.",
-    Duration = 8
-})
-
--- You can use the SaveManager:LoadAutoloadConfig() to load a config
--- which has been marked to be one that auto loads!
-SaveManager:LoadAutoloadConfig()
+dragify(Frame)
